@@ -71,12 +71,14 @@ GO
 /*9.	Вибрати всі міста, де є постачальники  і/або деталі (два запити – перший повертає міста з дублікатами, другий без дублікатів) . Міста у кожному запиті  відсортувати в алфавітному порядку */
 SELECT city FROM suppliers
 UNION 
-SELECT city FROM details;
+SELECT city FROM details
+ORDER BY city;
 GO
 
 SELECT city FROM suppliers
 UNION ALL
-SELECT city FROM details;
+SELECT city FROM details
+ORDER BY city;
 GO
 
 /*10.	Вибрати всіх постачальників за вийнятком тих, що постачають деталі з Лондона */
@@ -124,35 +126,109 @@ GO
 /*Запити використовуючи CTE  або Hierarchical queries*/
 
 /*13.	Написати довільний запит з двома СТЕ  (в одному є звертання до іншого) */
+/*Поставки в яких постачальник і виріб із одного міста та к-сть поставки більша середньої к-сті поставок поточного виробу*/
+;WITH avg_quantity(productid,avgQ) AS
+(SELECT productid,AVG(quantity)
+FROM supplies
+GROUP BY productid),
 
+coolQ AS
+(SELECT *
+FROM supplies
+WHERE quantity>(SELECT avgQ FROM avg_quantity WHERE productid=supplies.productid))
+
+SELECT main.supplierid,sup.name AS sup_name,main.productid,pr.name AS pr_name,sup.city,main.detailid,det.name AS det_name, det.city AS det_city
+FROM coolQ AS main
+JOIN details AS det ON det.detailid=main.detailid
+JOIN suppliers AS sup ON sup.supplierid=main.supplierid
+JOIN products AS pr ON pr.productid=main.productid
+WHERE sup.city=pr.city;
 GO
+
 /*14. Обчислити за допомогою рекурсивної CTE факторіал від 10  та вивести у форматі таблиці з колонками Position та Value */
+;WITH factorial (pos, val) AS 
+(SELECT 1,1 
+UNION ALL 
+SELECT pos + 1, (pos + 1) * val
+FROM factorial
+WHERE pos < 10)
 
+SELECT pos,val
+FROM factorial;
 GO
+
 /*15.	Обчислити за допомогою рекурсивної CTE перші 20 елементів ряду Фібоначчі та вивести у форматі таблиці з колонками Position та Value  */
+;WITH fib (pos, prev,val) AS 
+(SELECT 1,0,1
+UNION ALL 
+SELECT pos+1, val,val+prev
+FROM fib
+WHERE pos < 20)
 
+SELECT pos,val
+FROM fib;
 GO
+
 /*16.	Розділити вхідний період 2013-11-25 до 2014-03-05 на періоди по календарним місяцям за допомогою рекурсивної CTE та вивести у форматі таблиці з колонками StartDate та EndDate  */
+DECLARE @startdate DATE='2013/11/25'    
+DECLARE @enddate DATE='2014/03/05'
 
+;WITH cte([date]) AS
+(SELECT @startdate
+UNION ALL
+SELECT DATEADD(d,1,[date])
+FROM cte
+WHERE [date]<@enddate)
+
+SELECT [date] AS StartDate,CASE
+						   WHEN MONTH([date]) <> MONTH(@enddate) THEN EOMONTH([date])
+						   ELSE @enddate
+						   END AS EndDate 
+FROM cte
+WHERE DAY([date]) = 1 OR [date] = @startdate
+OPTION (MAXRECURSION 0);
 GO
+
 /*17.	Розрахувати календар поточного місяця за допомогою рекурсивної CTE та вивести дні місяця у форматі таблиці з колонками Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday*/
+DECLARE @start DATE = DATEADD(d, 1, EOMONTH(GETDATE(), -1))
+DECLARE @end DATE = EOMONTH(@start)
 
+;WITH cte([date],[dayNum]) AS
+(SELECT @start, DATEPART(WEEKDAY,@start)
+UNION ALL
+SELECT DATEADD(d,1,[date]),DATEPART(WEEKDAY,DATEADD(d,1,[date]))
+FROM cte
+WHERE [date]<@end)
+
+SELECT [1] AS Monday,[2] AS Tuesday,[3] AS Wednesday,[4] AS Thursday,[5] AS Friday,[6] AS Saturday,[7] AS Sunday
+FROM (SELECT DATEPART(WEEK, [date]) AS weekNum, DAY([date]) AS [date],[dayNum]
+	  FROM cte) AS Dates
+PIVOT(
+  MIN([date]) FOR [dayNum] 
+  IN ([1],[2],[3],[4],[5],[6],[7])
+) AS [pivot]
 GO
+
 /*18.	Написати запит  який повертає регіони першого рівня (результат нижче)*/
   
 GO
+
 /*19.	Написати запит який повертає під-дерево для конкретного регіону  (наприклад, Івано-Франківськ). Результат має виглядати наступним чином (колонки можуть називатися інакше)*/
 
 GO  
+
 /*20.	Написати запит котрий вертає повне дерево  від root ('Ukraine') і додаткову колонку, яка вказує на рівень в ієрархії*/
 
 GO  
+
 /*21.	Написати запит який повертає дерево для регіону Lviv */
 
 GO  
+
 /*22.	Написати запит який повертає дерево зі шляхами для регіону Lviv*/
 
 GO  
+
 /*23.	Написати запит, який повертає дерево  зі шляхами і довжиною шляхів для регіону Lviv*/
 
 GO
