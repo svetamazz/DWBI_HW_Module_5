@@ -210,25 +210,108 @@ PIVOT(
 GO
 
 /*18.	Написати запит  який повертає регіони першого рівня (результат нижче)*/
-  
+;WITH cte (region_id, place_id, name, [PlaceLevel]) AS
+(SELECT region_id,id, name, 0 
+FROM [geography]
+WHERE region_id IS NULL
+UNION ALL 
+SELECT  g.region_id,g.id, g.name, [PlaceLevel]+1
+FROM [geography] g
+JOIN cte 
+ON g.region_id = cte.place_id)
+
+SELECT * 
+FROM cte
+WHERE [PlaceLevel] = 1;
 GO
 
-/*19.	Написати запит який повертає під-дерево для конкретного регіону  (наприклад, Івано-Франківськ). Результат має виглядати наступним чином (колонки можуть називатися інакше)*/
+/*19.	Написати запит який повертає під-дерево для конкретного регіону  (наприклад, Івано-Франківськ) */
+DECLARE @region VARCHAR(20) ='Ivano-Frankivsk' 
 
+;WITH cte (region_id, id, name, [level]) AS
+(
+      SELECT region_id, id, name, -1
+      FROM [geography]
+      WHERE name=@region
+      UNION ALL 
+      SELECT g.region_id, g.id, g.name, [level]+1
+      FROM [geography] g
+      JOIN cte 
+	  ON g.region_id = cte.id
+)
+SELECT * 
+FROM cte
+WHERE [level]>=0
+ORDER BY [level];
 GO  
 
 /*20.	Написати запит котрий вертає повне дерево  від root ('Ukraine') і додаткову колонку, яка вказує на рівень в ієрархії*/
+;WITH cte (region_id, place_id, name, [PlaceLevel]) AS
+(SELECT region_id,id, name, 0 
+FROM [geography]
+WHERE region_id IS NULL
+UNION ALL 
+SELECT  g.region_id,g.id, g.name, [PlaceLevel]+1
+FROM [geography] g
+JOIN cte 
+ON g.region_id = cte.place_id)
 
+SELECT * 
+FROM cte;
 GO  
 
 /*21.	Написати запит який повертає дерево для регіону Lviv */
+DECLARE @region VARCHAR(20) ='Lviv' 
 
+;WITH cte (region_id, id, name, [level]) AS
+(
+      SELECT region_id, id, name, 1
+      FROM [geography]
+      WHERE name=@region
+      UNION ALL 
+      SELECT g.region_id, g.id, g.name, [level]+1
+      FROM [geography] g
+      JOIN cte 
+	  ON g.region_id = cte.id
+)
+SELECT * 
+FROM cte
+ORDER BY [level];
 GO  
 
 /*22.	Написати запит який повертає дерево зі шляхами для регіону Lviv*/
+DECLARE @region VARCHAR(20) ='Lviv' 
 
+;WITH cte ([name],id,[level],[path]) AS
+(
+      SELECT [name], id, 1, CAST(CONCAT('/',[name]) AS VARCHAR)
+      FROM [geography]
+      WHERE [name] = @region
+      UNION ALL 
+      SELECT g.[name],g.id,[level]+1,CAST(CONCAT([path],'/',g.[name]) AS VARCHAR)
+      FROM [geography] g
+      JOIN cte 
+	  ON g.region_id = cte.id
+)
+SELECT [name],[level] AS id,[path] 
+FROM cte;
 GO  
 
 /*23.	Написати запит, який повертає дерево  зі шляхами і довжиною шляхів для регіону Lviv*/
+DECLARE @region VARCHAR(20) ='Lviv' 
 
+;WITH cte ([name],center,id,[level],[path]) AS
+(
+      SELECT [name],[name], id, 0, CAST(CONCAT('/',[name]) AS VARCHAR)
+      FROM [geography]
+      WHERE [name] = @region
+      UNION ALL 
+      SELECT g.[name],cte.center,g.id,[level]+1,CAST(CONCAT([path],'/',g.[name]) AS VARCHAR)
+      FROM [geography] g
+      JOIN cte 
+	  ON g.region_id = cte.id
+)
+SELECT [name] AS Region,center,[level] AS pathlen,[path] 
+FROM cte
+WHERE [level]>0;
 GO
