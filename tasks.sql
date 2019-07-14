@@ -61,19 +61,63 @@ GO
 /*UNION, UNION ALL , EXCEPT, INTERSECT*/
 
 /*8.	Вибрати постачальників з Лондона або Парижу*/
-
+SELECT * FROM suppliers
+WHERE city LIKE 'Paris'
+UNION 
+SELECT * FROM suppliers
+WHERE city LIKE 'London';
 GO
+
 /*9.	Вибрати всі міста, де є постачальники  і/або деталі (два запити – перший повертає міста з дублікатами, другий без дублікатів) . Міста у кожному запиті  відсортувати в алфавітному порядку */
-
+SELECT city FROM suppliers
+UNION 
+SELECT city FROM details;
 GO
+
+SELECT city FROM suppliers
+UNION ALL
+SELECT city FROM details;
+GO
+
 /*10.	Вибрати всіх постачальників за вийнятком тих, що постачають деталі з Лондона */
-
+SELECT * FROM suppliers
+EXCEPT 
+SELECT * FROM suppliers
+WHERE supplierid IN (SELECT DISTINCT supplierid 
+					 FROM supplies JOIN details
+					 ON supplies.detailid=details.detailid
+					 WHERE details.city LIKE 'London');
 GO
+
 /*11.	Знайти різницю між множиною продуктів, які знаходяться в Лондоні та Парижі  і множиною продуктів, які знаходяться в Парижі та Римі*/
-
+(SELECT * FROM products
+WHERE city LIKE 'London'
+UNION
+SELECT * FROM products
+WHERE city LIKE 'Paris')
+EXCEPT
+(SELECT * FROM products
+WHERE city LIKE 'Paris'
+UNION
+SELECT * FROM products
+WHERE city LIKE 'Roma');
 GO
-/*12.	Вибрати поставки, що зробив постачальник з Лондона, а також поставки зелених деталей за виключенням поставлених виробів з Парижу (код постачальника, код деталі, код виробу)*/
 
+/*12.	Вибрати поставки, що зробив постачальник з Лондона, а також поставки зелених деталей за виключенням поставлених виробів з Парижу (код постачальника, код деталі, код виробу)*/
+SELECT supplierid,detailid,productid
+FROM supplies 
+WHERE supplierid IN(SELECT supplierid FROM suppliers
+					WHERE city LIKE 'London')
+UNION
+SELECT supplierid,detailid,productid
+FROM supplies
+WHERE detailid IN(SELECT detailid FROM details
+				  WHERE color LIKE 'green')
+EXCEPT 
+SELECT supplierid,detailid,productid
+FROM supplies 
+WHERE productid IN(SELECT productid FROM products
+				   WHERE city LIKE 'Paris');
 GO
 
 
